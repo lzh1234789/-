@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>预设问题问答应用</title>
+  <!-- 引入样式和图标库 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <script>
+    // 配置主题颜色
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6', // 蓝色主色调
+            secondary: '#10B981',
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .question-item {
+        @apply bg-white border border-gray-200 rounded-lg p-3 hover:bg-blue-50 hover:border-primary cursor-pointer transition-all;
+      }
+      .chat-bubble-user {
+        @apply bg-primary text-white rounded-lg rounded-tr-none px-4 py-2 max-w-[80%] shadow-sm;
+      }
+      .chat-bubble-bot {
+        @apply bg-gray-100 text-gray-800 rounded-lg rounded-tl-none px-4 py-2 max-w-[80%] shadow-sm;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-2xl mx-auto p-4">
+    <!-- 标题 -->
+    <h1 class="text-2xl font-bold text-center my-6 text-gray-800">问答系统</h1>
+    
+    <!-- 聊天区域 -->
+    <div id="chat-box" class="bg-white rounded-xl shadow-md h-80 p-4 overflow-y-auto mb-4 space-y-4">
+      <div class="text-center text-gray-500 pt-16">
+        <i class="fa fa-search text-4xl mb-2 text-gray-300"></i>
+        <p>请在下方输入关键词搜索问题</p>
+      </div>
+    </div>
+    
+    <!-- 搜索和问题列表区域 -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <!-- 搜索框 -->
+      <div class="relative mb-4">
+        <input 
+          type="text" 
+          id="search-input" 
+          placeholder="输入关键词搜索问题..." 
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+        <i class="fa fa-search absolute right-3 top-3 text-gray-400"></i>
+      </div>
+      
+      <!-- 预设问题列表（默认显示全部） -->
+      <div id="questions-list" class="max-h-40 overflow-y-auto space-y-2">
+        <!-- 问题会通过JS动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --------------- 核心：预设问题和答案 ---------------
+    // 你可以在这里添加/修改所有预设问题和对应的回答
+    const presetQuestions = [
+      { question: "怎么使用？", answer: "第一步注册，第二步下载游戏进入客服告诉你的大区玩一分钟，第三步激活后台" },
+      { question: "都有什么游戏？", answer: "在登录页面点击「忘记密码」，通过手机验证码重置。" },
+      { question: "订单多久能发货？", answer: "一般情况下，下单后48小时内会发出，偏远地区可能延迟1-2天。" },
+      { question: "支持7天无理由退货吗？", answer: "支持，需保持商品原包装完好，不影响二次销售。" },
+      { question: "客服工作时间是什么？", answer: "周一至周日 9:00-21:00，节假日不休。" },
+      { question: "如何查询物流信息？", answer: "在「我的订单」中找到对应订单，点击「查看物流」即可。" },
+      { question: "会员有什么特权？", answer: "会员可享受9折优惠、免费包邮、生日礼包等特权。" },
+    ];
+
+    // --------------- 页面元素 ---------------
+    const searchInput = document.getElementById('search-input');
+    const questionsList = document.getElementById('questions-list');
+    const chatBox = document.getElementById('chat-box');
+
+    // --------------- 初始化：显示所有预设问题 ---------------
+    function showQuestions(questions) {
+      // 清空列表
+      questionsList.innerHTML = '';
+      
+      // 如果没有匹配的问题
+      if (questions.length === 0) {
+        questionsList.innerHTML = '<p class="text-gray-500 text-center py-2">没有找到匹配的问题，请尝试其他关键词</p>';
+        return;
+      }
+      
+      // 生成问题列表
+      questions.forEach(item => {
+        const questionElement = document.createElement('div');
+        questionElement.className = 'question-item';
+        questionElement.textContent = item.question;
+        
+        // 点击问题时，发送到聊天框并显示答案
+        questionElement.addEventListener('click', () => {
+          addMessageToChat('user', item.question);
+          // 模拟思考时间
+          setTimeout(() => {
+            addMessageToChat('bot', item.answer);
+          }, 600);
+        });
+        
+        questionsList.appendChild(questionElement);
+      });
+    }
+
+    // --------------- 关键词搜索功能 ---------------
+    function searchQuestions(keyword) {
+      // 转为小写，方便模糊匹配
+      const lowerKeyword = keyword.toLowerCase().trim();
+      
+      // 如果没有输入关键词，显示所有问题
+      if (!lowerKeyword) {
+        return presetQuestions;
+      }
+      
+      // 模糊匹配：问题中包含关键词的都显示
+      return presetQuestions.filter(item => {
+        return item.question.toLowerCase().includes(lowerKeyword);
+      });
+    }
+
+    // --------------- 添加消息到聊天框 ---------------
+    function addMessageToChat(sender, content) {
+      // 清空初始提示
+      if (chatBox.querySelector('.text-center.text-gray-500')) {
+        chatBox.innerHTML = '';
+      }
+      
+      // 创建消息元素
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+      
+      // 消息气泡样式（用户/系统区分）
+      const bubbleClass = sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot';
+      const icon = sender === 'user' ? 'fa-user' : 'fa-robot';
+      
+      messageDiv.innerHTML = `
+        ${sender === 'bot' ? `<div class="mr-2 mt-1">
+          <i class="fa ${icon} text-primary"></i>
+        </div>` : ''}
+        <div class="${bubbleClass}">${content}</div>
+        ${sender === 'user' ? `<div class="ml-2 mt-1">
+          <i class="fa ${icon} text-gray-500"></i>
+        </div>` : ''}
+      `;
+      
+      // 添加到聊天框并滚动到底部
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // --------------- 绑定搜索事件 ---------------
+    searchInput.addEventListener('input', () => {
+      const matchedQuestions = searchQuestions(searchInput.value);
+      showQuestions(matchedQuestions);
+    });
+
+    // 初始化页面：默认显示所有问题
+    showQuestions(presetQuestions);
+  </script>
+</body>
+</html>
